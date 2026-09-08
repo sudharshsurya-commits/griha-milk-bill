@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.local
+.vercel
+__pycache__/
+*.py[cod]
+*.class
+data/griha.db
+data/*.db

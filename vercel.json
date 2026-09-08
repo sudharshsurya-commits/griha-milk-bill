@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/bills/bulk", "destination": "/api/bills/bulk.py" },
+    { "source": "/api/bills/:id", "destination": "/api/bills/index.py" },
+    { "source": "/api/bills", "destination": "/api/bills/index.py" },
+    { "source": "/api/auth/:path*", "destination": "/api/auth/:path*.py" },
+    { "source": "/api/:path*", "destination": "/api/:path*.py" },
+    { "source": "/((?!api/).*)", "destination": "/bill_generator.html" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "GRIHA Milk Bill Generator",
+  "short_name": "GRIHA Bill",
+  "description": "Professional Milk Billing, Customer Management & WhatsApp Invoicing Application",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1a2456",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
