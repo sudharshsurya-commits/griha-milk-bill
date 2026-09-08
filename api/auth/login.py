@@ -2,7 +2,7 @@ import json
 import secrets
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
-from api.db import get_db, verify_password
+from api._db import get_db, verify_password
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):

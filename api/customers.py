@@ -1,6 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler
-from api.db import get_db, authenticate_request
+from api._db import get_db, authenticate_request
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):

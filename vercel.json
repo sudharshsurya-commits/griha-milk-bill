@@ -2,11 +2,23 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.py",
+      "src": "api/auth/*.py",
       "use": "@vercel/python"
     },
     {
-      "src": "api/*.py",
+      "src": "api/bills/*.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/customers.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/health.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/settings.py",
       "use": "@vercel/python"
     },
     {
