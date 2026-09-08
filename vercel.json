@@ -1,11 +1,71 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/bills/bulk", "destination": "/api/bills/bulk.py" },
-    { "source": "/api/bills/:id", "destination": "/api/bills/index.py" },
-    { "source": "/api/bills", "destination": "/api/bills/index.py" },
-    { "source": "/api/auth/:path*", "destination": "/api/auth/:path*.py" },
-    { "source": "/api/:path*", "destination": "/api/:path*.py" },
-    { "source": "/((?!api/).*)", "destination": "/bill_generator.html" }
+  "builds": [
+    {
+      "src": "api/**/*.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/*.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "bill_generator.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sw.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.ico",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/bills/bulk",
+      "dest": "api/bills/bulk.py"
+    },
+    {
+      "src": "/api/bills/(.*)",
+      "dest": "api/bills/index.py"
+    },
+    {
+      "src": "/api/bills",
+      "dest": "api/bills/index.py"
+    },
+    {
+      "src": "/api/auth/(.*)",
+      "dest": "api/auth/$1.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "api/$1.py"
+    },
+    {
+      "src": "/sw.js",
+      "dest": "/sw.js"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/(.*\\.(?:png|ico|jpg|jpeg))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/bill_generator.html"
+    }
   ]
 }
