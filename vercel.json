@@ -26,6 +26,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "admin.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "manifest.json",
       "use": "@vercel/static"
     },
@@ -74,6 +78,14 @@
     {
       "src": "/(.*\\.(?:png|ico|jpg|jpeg))",
       "dest": "/$1"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin.html"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/admin.html"
     },
     {
       "src": "/(.*)",

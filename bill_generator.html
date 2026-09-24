@@ -477,54 +477,6 @@
 </head>
 <body>
 
-<!-- Secure Login Modal Screen -->
-<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #1a2456 0%, #0f172a 100%); z-index:999999; display:flex; align-items:center; justify-content:center; font-family:'Segoe UI', Tahoma, sans-serif;">
-  <div style="background:#ffffff; width:92%; max-width:420px; padding:32px 28px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.4); text-align:center;">
-    <div style="background:#1a2456; width:65px; height:65px; margin:0 auto 16px auto; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:2rem; box-shadow:0 4px 10px rgba(26,36,86,0.3);">
-      🔒
-    </div>
-    <h2 style="margin:0 0 6px 0; color:#1a2456; font-size:1.6rem; font-weight:800;">GRIHA</h2>
-    <p style="margin:0 0 20px 0; color:#64748b; font-size:0.92rem;">Milk Bill Generator — Admin Login</p>
-    
-    <form id="loginForm" onsubmit="handleLoginSubmit(event)" style="text-align:left;">
-      <div style="margin-bottom:15px;">
-        <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:6px;">Username</label>
-        <input type="text" id="loginUser" placeholder="Enter username (default: admin)" autocomplete="username" required style="width:100%; padding:11px 12px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:0.95rem; outline:none; box-sizing:border-box;">
-      </div>
-      
-      <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:6px;">Password</label>
-        <div style="position:relative;">
-          <input type="password" id="loginPass" placeholder="Enter password (default: admin123)" autocomplete="current-password" required style="width:100%; padding:11px 40px 11px 12px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:0.95rem; outline:none; box-sizing:border-box;">
-          <button type="button" onclick="togglePasswordVisibility('loginPass', 'eyeIconLogin')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:#64748b;" title="Toggle password visibility">
-            <span id="eyeIconLogin">👁️</span>
-          </button>
-        </div>
-      </div>
-
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-        <label style="font-size:0.82rem; color:#475569; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chkShowPass" onchange="togglePasswordVisibilityCheck('loginPass', this.checked)">
-          👁 Show Password
-        </label>
-      </div>
-      
-      <div id="loginError" style="color:#ef4444; background:#fef2f2; border:1px solid #fecaca; padding:8px 12px; border-radius:6px; font-size:0.85rem; font-weight:600; margin-bottom:16px; display:none; text-align:center;">
-        ❌ Invalid username or password! Please try again.
-      </div>
-      
-      <button type="submit" style="width:100%; background:#1a2456; color:#ffffff; border:none; padding:12px; border-radius:6px; font-size:1.02rem; font-weight:700; cursor:pointer; transition:background 0.2s; box-shadow:0 4px 12px rgba(26,36,86,0.25);">
-        Login to Dashboard
-      </button>
-
-      <div style="margin-top:16px; padding:8px; background:#f8fafc; border-radius:6px; border:1px dashed #cbd5e1; text-align:center; font-size:0.75rem; color:#64748b;">
-        Default Credentials: <b>admin</b> / <b>admin123</b><br>(Changeable under Settings &gt; Account Settings)
-      </div>
-    </form>
-  </div>
-</div>
-
-
 <div class="navbar no-print">
   <img id="navLogo" src="" alt="GRIHA Logo">
   <h1 id="navBrandName">GRIHA Milk Bill Generator</h1>
@@ -539,7 +491,6 @@
     <button onclick="switchTab('history', this)">📜 Bill History</button>
     <button onclick="switchTab('settings', this)">⚙️ Settings</button>
     <button onclick="openWhatsAppDirect()" style="background:#25D366; color:#ffffff; font-weight:700; border:none; margin-left:auto; display:inline-flex; align-items:center; gap:6px;" title="Launch WhatsApp on desktop / mobile">💬 Open WhatsApp</button>
-    <button onclick="logout()" style="background:#ef4444; color:#ffffff; font-weight:700; border:none; margin-left:8px; display:inline-flex; align-items:center; gap:5px;" title="Log out from GRIHA">🚪 Logout</button>
   </div>
 </div>
 
@@ -958,71 +909,7 @@
       <button class="btn" onclick="saveSettings()">💾 Save Brand Settings</button>
     </div>
 
-    <!-- 🔐 Account Settings (Change Username & Password) -->
-    <div style="border-top:2px solid var(--primary); padding-top:20px; margin-top:30px;">
-      <h3 style="color:var(--primary); margin:0 0 8px 0; display:flex; align-items:center; gap:8px;">
-        🔐 Account Settings
-      </h3>
-      <p style="color:#64748b; font-size:0.85rem; margin:0 0 16px 0;">
-        Manage your local administrator login credentials. Updated credentials are saved securely in your browser and will be required on your next login.
-      </p>
-
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px;">
-        <div id="accountSuccessMsg" style="display:none; background:#ecfdf5; border:1.5px solid #10b981; color:#065f46; padding:10px 14px; border-radius:6px; font-weight:700; font-size:0.9rem; margin-bottom:15px;">
-          ✓ Login credentials updated successfully.
-        </div>
-        <div id="accountErrorMsg" style="display:none; background:#fef2f2; border:1.5px solid #ef4444; color:#991b1b; padding:10px 14px; border-radius:6px; font-weight:600; font-size:0.88rem; margin-bottom:15px;">
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px;">
-          <div class="form-group">
-            <label>Current Username *</label>
-            <input type="text" id="curUsername" placeholder="e.g. admin" autocomplete="username">
-          </div>
-          <div class="form-group">
-            <label>Current Password *</label>
-            <div style="position:relative;">
-              <input type="password" id="curPassword" placeholder="Current password" autocomplete="current-password" style="width:100%; padding-right:38px; box-sizing:border-box;">
-              <button type="button" onclick="togglePasswordVisibility('curPassword', 'eyeCurPass')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1rem; color:#64748b;">
-                <span id="eyeCurPass">👁️</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px;">
-          <div class="form-group">
-            <label>New Username *</label>
-            <input type="text" id="newUsername" placeholder="Enter new username">
-          </div>
-          <div class="form-group">
-            <label>New Password *</label>
-            <div style="position:relative;">
-              <input type="password" id="newPassword" placeholder="Enter new password" style="width:100%; padding-right:38px; box-sizing:border-box;">
-              <button type="button" onclick="togglePasswordVisibility('newPassword', 'eyeNewPass')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1rem; color:#64748b;">
-                <span id="eyeNewPass">👁️</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:18px;">
-          <label>Confirm New Password *</label>
-          <div style="position:relative; max-width:400px;">
-            <input type="password" id="confirmNewPassword" placeholder="Confirm new password" style="width:100%; padding-right:38px; box-sizing:border-box;">
-            <button type="button" onclick="togglePasswordVisibility('confirmNewPassword', 'eyeConfPass')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1rem; color:#64748b;">
-              <span id="eyeConfPass">👁️</span>
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <button type="button" class="btn" onclick="changeAdminCredentials()" style="background:#1a2456; color:white; font-weight:700; padding:10px 20px;">
-            🔄 Change Username & Password
-          </button>
-        </div>
-      </div>
-    </div>
+    
     <!-- 🎨 Customize Layout Section -->
     <div style="border-top:2px solid var(--primary); padding-top:20px; margin-top:30px;">
       <h3 style="color:var(--primary); margin:0 0 8px 0; display:flex; align-items:center; gap:8px;">
@@ -1767,254 +1654,6 @@ function togglePasswordVisibilityCheck(fieldId, isChecked) {
   if (el) {
     el.type = isChecked ? 'text' : 'password';
   }
-}
-
-// Update authentication logic
-function checkAuth() {
-  const isAuth = sessionStorage.getItem('griha_logged_in');
-  const overlay = document.getElementById('loginOverlay');
-  if (isAuth === 'true') {
-    if (overlay) overlay.style.display = 'none';
-  } else {
-    if (overlay) {
-      overlay.style.display = 'flex';
-      const uInput = document.getElementById('loginUser');
-      if (uInput) uInput.focus();
-    }
-  }
-}
-
-async function handleLoginSubmit(e) {
-  e.preventDefault();
-  const u = (document.getElementById('loginUser').value || '').trim();
-  const p = (document.getElementById('loginPass').value || '').trim();
-  const err = document.getElementById('loginError');
-  const btn = document.getElementById('loginBtn') || e.target.querySelector('button[type="submit"]');
-
-  if (err) err.style.display = 'none';
-  if (btn) btn.disabled = true;
-
-  try {
-    // 1. Attempt Server-Side API Authentication
-    const res = await apiCall('/api/auth/login', 'POST', { username: u, password: p });
-
-    if (res.ok && res.data && res.data.token) {
-      authToken = res.data.token;
-      currentUser = res.data.user;
-      localStorage.setItem('griha_auth_token', authToken);
-      sessionStorage.setItem('griha_auth_token', authToken);
-      sessionStorage.setItem('griha_logged_in', 'true');
-
-      const overlay = document.getElementById('loginOverlay');
-      if (overlay) overlay.style.display = 'none';
-
-      updateSyncBadge('synced', 'Cloud Synced (' + currentUser.username + ')');
-      await pullCloudData();
-      return;
-    }
-
-    // 2. If server returned invalid credentials (401), show error
-    if (res.status === 401 || (res.data && res.data.error)) {
-      if (err) {
-        err.style.display = 'block';
-        err.textContent = '❌ ' + (res.data.error || 'Invalid username or password!');
-      }
-      return;
-    }
-
-    // 3. If server is offline/unreachable, fallback to local credentials
-    const savedUser = localStorage.getItem('griha_admin_user') || localStorage.getItem('griha_user') || 'admin';
-    const savedPass = localStorage.getItem('griha_admin_pass') || localStorage.getItem('griha_pass') || 'admin123';
-
-    if (u.toLowerCase() === savedUser.toLowerCase() && p === savedPass) {
-      sessionStorage.setItem('griha_logged_in', 'true');
-      const overlay = document.getElementById('loginOverlay');
-      if (overlay) overlay.style.display = 'none';
-      updateSyncBadge('offline', 'Offline Mode');
-    } else {
-      if (err) {
-        err.style.display = 'block';
-        err.textContent = '❌ Invalid username or password! Please try again.';
-      }
-    }
-  } catch(ex) {
-    console.error('Login error:', ex);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-function logout() {
-  if (confirm('Are you sure you want to log out from GRIHA Milk Bill Generator?')) {
-    if (authToken) {
-      apiCall('/api/auth/logout', 'POST').catch(() => {});
-    }
-    authToken = '';
-    currentUser = null;
-    localStorage.removeItem('griha_auth_token');
-    sessionStorage.removeItem('griha_auth_token');
-    sessionStorage.removeItem('griha_logged_in');
-    updateSyncBadge('offline', 'Logged Out');
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) {
-      overlay.style.display = 'flex';
-      const p = document.getElementById('loginPass');
-      if (p) p.value = '';
-    } else {
-      location.reload();
-    }
-  }
-}
-
-async function changeAdminCredentials() {
-  const curU = (document.getElementById('curUsername')?.value || '').trim();
-  const curP = (document.getElementById('curPassword')?.value || '').trim();
-  const newU = (document.getElementById('newUsername')?.value || '').trim();
-  const newP = (document.getElementById('newPassword')?.value || '').trim();
-  const confP = (document.getElementById('confirmNewPassword')?.value || '').trim();
-
-  const successEl = document.getElementById('accountSuccessMsg');
-  const errorEl = document.getElementById('accountErrorMsg');
-  if (successEl) successEl.style.display = 'none';
-  if (errorEl) errorEl.style.display = 'none';
-
-  function showError(msg) {
-    if (errorEl) {
-      errorEl.textContent = '❌ ' + msg;
-      errorEl.style.display = 'block';
-      errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      alert(msg);
-    }
-  }
-
-  function showSuccess(msg) {
-    if (successEl) {
-      successEl.textContent = '✓ ' + msg;
-      successEl.style.display = 'block';
-      successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      alert(msg);
-    }
-  }
-
-  // Validations
-  if (!curU || !curP) {
-    return showError('Please enter both your Current Username and Current Password.');
-  }
-  if (!newU) {
-    return showError('Please enter a New Username.');
-  }
-  if (!newP) {
-    return showError('Please enter a New Password.');
-  }
-  if (newP.length < 4) {
-    return showError('New Password must be at least 4 characters long.');
-  }
-  if (newP !== confP) {
-    return showError('New Password and Confirm New Password do not match.');
-  }
-
-  // 1. Try server-side credential update
-  if (authToken) {
-    const res = await apiCall('/api/auth/change-credentials', 'POST', {
-      currentPassword: curP,
-      newUsername: newU,
-      newPassword: newP
-    });
-
-    if (res.ok) {
-      localStorage.setItem('griha_admin_user', newU);
-      localStorage.setItem('griha_admin_pass', newP);
-      document.getElementById('curUsername').value = '';
-      document.getElementById('curPassword').value = '';
-      document.getElementById('newUsername').value = '';
-      document.getElementById('newPassword').value = '';
-      document.getElementById('confirmNewPassword').value = '';
-      return showSuccess('Account credentials updated & synchronized across all your devices!');
-    } else if (res.status === 400 || res.status === 401) {
-      return showError(res.data.error || 'Failed to update credentials.');
-    }
-  }
-
-  // 2. Local fallback if offline
-  const savedUser = localStorage.getItem('griha_admin_user') || localStorage.getItem('griha_user') || 'admin';
-  const savedPass = localStorage.getItem('griha_admin_pass') || localStorage.getItem('griha_pass') || 'admin123';
-
-  if (curU.toLowerCase() !== savedUser.toLowerCase() || curP !== savedPass) {
-    return showError('Current username or password does not match our records.');
-  }
-
-  localStorage.setItem('griha_admin_user', newU);
-  localStorage.setItem('griha_admin_pass', newP);
-  localStorage.setItem('griha_user', newU);
-  localStorage.setItem('griha_pass', newP);
-
-  document.getElementById('curUsername').value = '';
-  document.getElementById('curPassword').value = '';
-  document.getElementById('newUsername').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('confirmNewPassword').value = '';
-  showSuccess('Login credentials updated successfully!');
-}
-
-
-let state = {
-  items: [],
-  brandName: 'GRIHA',
-  tagline: 'Feel The Quality',
-  upiId: 'griha@upi',
-  careNo: '+91 99999 99999',
-  defaultRate: 22,
-  logoSrc: GRIHA_LOGO_B64,
-  qrMode: 'generated',
-  uploadedQrSrc: ''
-};
-
-const SAMPLE = {
-  custName: 'Ravi Kumar',
-  month: 'September 2025',
-  billNo: 'GRIHA-001',
-  billDate: '2025-09-01',
-  totalDays: 31,
-  holdDays: 0,
-  deliveryDays: 31,
-  dailyQty: 2,
-  milkUnit: 'Nazhi',
-  milkRate: 22,
-  items: [
-    { name: 'Curd', qty: 2, unit: 'Pkt', rate: 43 }
-  ],
-  receivable: 0,
-  payable: 0,
-  upiId: 'griha@upi',
-  careNo: '+91 99999 99999'
-};
-
-function getVal(id) { 
-  const el = document.getElementById(id);
-  return el ? el.value : ''; 
-}
-function getNum(id) { 
-  let val = parseFloat(getVal(id)); 
-  return isNaN(val) || val < 0 ? 0 : val;
-}
-function setVal(id, val) { 
-  const el = document.getElementById(id);
-  if (el) el.value = val; 
-}
-function setText(id, text) { 
-  const el = document.getElementById(id);
-  if (el) el.innerText = text; 
-}
-
-function switchTab(tabId, btn) {
-  document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
-  document.querySelectorAll('.nav-tabs button').forEach(function(el) { el.classList.remove('active'); });
-  const target = document.getElementById(tabId + '-tab');
-  if (target) target.classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (tabId === 'history') renderHistory();
 }
 
 function init() {
@@ -4228,52 +3867,24 @@ async function apiCall(endpoint, method = 'GET', data = null) {
 
 // Check session on load & sync data across devices
 async function checkAuthAndSync() {
-  const overlay = document.getElementById('loginOverlay');
-  const token = localStorage.getItem('griha_auth_token') || sessionStorage.getItem('griha_auth_token');
-
+  const token = localStorage.getItem('griha_auth_token') || sessionStorage.getItem('griha_auth_token') || localStorage.getItem('griha_token');
   if (!token) {
-    // Check if client-side logged in
-    const clientLogged = sessionStorage.getItem('griha_logged_in');
-    if (clientLogged === 'true') {
-      if (overlay) overlay.style.display = 'none';
-      updateSyncBadge('offline', 'Local Mode');
-    } else {
-      if (overlay) {
-        overlay.style.display = 'flex';
-        const uInput = document.getElementById('loginUser');
-        if (uInput) uInput.focus();
-      }
-    }
+    updateSyncBadge('offline', 'Local Mode');
     return;
   }
-
   authToken = token;
   updateSyncBadge('syncing', 'Connecting...');
-
-  const check = await apiCall('/api/auth/me');
-  if (check.ok && check.data.authenticated) {
-    currentUser = check.data.user;
-    sessionStorage.setItem('griha_logged_in', 'true');
-    if (overlay) overlay.style.display = 'none';
-    updateSyncBadge('synced', 'Cloud Synced (' + currentUser.username + ')');
-
-    // Pull cloud settings and bills
-    await pullCloudData();
-  } else if (check.offline) {
-    // Offline mode: allow access if user was previously logged in
-    sessionStorage.setItem('griha_logged_in', 'true');
-    if (overlay) overlay.style.display = 'none';
-    updateSyncBadge('offline', 'Offline Mode');
-  } else {
-    // Token expired or invalid
-    localStorage.removeItem('griha_auth_token');
-    sessionStorage.removeItem('griha_auth_token');
-    authToken = '';
-    if (overlay) {
-      overlay.style.display = 'flex';
-      const uInput = document.getElementById('loginUser');
-      if (uInput) uInput.focus();
+  try {
+    const check = await apiCall('/api/auth/me');
+    if (check.ok && check.data && check.data.authenticated) {
+      currentUser = check.data.user;
+      updateSyncBadge('synced', 'Cloud Synced (' + currentUser.username + ')');
+      await pullCloudData();
+    } else {
+      updateSyncBadge('offline', 'Local Mode');
     }
+  } catch (e) {
+    updateSyncBadge('offline', 'Local Mode');
   }
 }
 
