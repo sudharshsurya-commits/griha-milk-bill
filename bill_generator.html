@@ -3821,7 +3821,7 @@ function applyCustomFieldsUI() {
 // ==========================================
 // ☁️ GRIHA CLOUD SYNC & CROSS-DEVICE ENGINE
 // ==========================================
-const API_BASE = ''; // Same origin (relative URL) for production deployment
+const API_BASE = (window.location.protocol === 'file:') ? 'https://griha-milk-bill-eight.vercel.app' : '';
 
 let currentUser = null;
 let authToken = localStorage.getItem('griha_auth_token') || sessionStorage.getItem('griha_auth_token') || '';

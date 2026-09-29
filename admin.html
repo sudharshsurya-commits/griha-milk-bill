@@ -286,6 +286,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;min-height:100v
 
 <script>
 // ─── State ────────────────────────────────────────────────────────────────
+var API_BASE = (window.location.protocol === 'file:') ? 'https://griha-milk-bill-eight.vercel.app' : '';
 var authToken = '';
 var adminUser = null;
 
@@ -328,7 +329,7 @@ window.addEventListener('DOMContentLoaded', async function() {
   if (!token) { showLogin(); return; }
   authToken = token;
   try {
-    var res  = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    var res  = await fetch(API_BASE + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
     var data = await res.json().catch(function(){ return {}; });
     if (res.ok && data.authenticated && data.user && data.user.role === 'admin') {
       adminUser = data.user;
@@ -367,7 +368,7 @@ async function handleAdminLogin(e) {
   if (errEl) errEl.style.display = 'none';
   if (btn)   { btn.disabled = true; btn.textContent = 'Logging in...'; }
   try {
-    var res  = await fetch('/api/auth/login', {
+    var res  = await fetch(API_BASE + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: uname, password: pw, role: 'admin' })
@@ -398,7 +399,7 @@ async function handleAdminLogin(e) {
 function adminLogout() {
   if (!confirm('Log out from Admin Panel?')) return;
   var token = getToken();
-  if (token) fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){});
+  if (token) fetch(API_BASE + '/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){});
   clearToken(); adminUser = null;
   document.getElementById('alUser').value = '';
   document.getElementById('alPass').value = '';
@@ -425,7 +426,7 @@ async function saveAdminCreds() {
 
   var btn = event.target; btn.disabled = true; btn.textContent = 'Saving...';
   try {
-    var res  = await fetch('/api/auth/change-credentials', {
+    var res  = await fetch(API_BASE + '/api/auth/change-credentials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
       body: JSON.stringify({ currentPassword: curPass, newUsername: newUser, newPassword: newPass })
@@ -473,7 +474,7 @@ async function saveUserCreds() {
 
   var btn = event.target; btn.disabled = true; btn.textContent = 'Saving...';
   try {
-    var res  = await fetch('/api/auth/change-user', {
+    var res  = await fetch(API_BASE + '/api/auth/change-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
       body: JSON.stringify({ currentUserPassword: curUserPw, newUsername: newUserNm, newPassword: newUserPw })
