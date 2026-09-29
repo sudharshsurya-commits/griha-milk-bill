@@ -1,24 +1,17 @@
 """
 Local development server for GRIHA Milk Bill Generator.
-Serves static files (bill_generator.html, admin.html, sw.js, manifest.json, assets)
-and handles /api/* routes using the serverless handlers.
+Serves static files (bill_generator.html, sw.js, manifest.json, assets)
+and handles /api/* routes using serverless handlers.
 """
 import os
 import sys
 import json
 import traceback
 import urllib.parse
-import importlib
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
-
-change_credentials_mod = importlib.import_module("api.auth.change-credentials")
-ChangeCredsHandler = change_credentials_mod.handler
-
-change_user_mod = importlib.import_module("api.auth.change-user")
-ChangeUserHandler = change_user_mod.handler
 
 from api.auth.login import handler as LoginHandler
 from api.auth.me import handler as MeHandler
@@ -47,6 +40,17 @@ class LocalAppHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def _extract_token(self):
+        auth = self.headers.get("authorization", self.headers.get("Authorization", ""))
+        if auth.startswith("Bearer "):
+            return auth[7:].strip()
+        cookie = self.headers.get("cookie", self.headers.get("Cookie", ""))
+        for part in cookie.split(";"):
+            part = part.strip()
+            if part.startswith("griha_token="):
+                return part[len("griha_token="):]
+        return ""
+
     def do_OPTIONS(self):
         path = urllib.parse.urlparse(self.path).path
         if path.startswith("/api/"):
@@ -61,9 +65,6 @@ class LocalAppHandler(SimpleHTTPRequestHandler):
             path = urllib.parse.urlparse(self.path).path
             if path == "/" or path == "/bill_generator.html":
                 self.path = "/bill_generator.html"
-                return super().do_GET()
-            elif path == "/admin" or path == "/admin.html":
-                self.path = "/admin.html"
                 return super().do_GET()
             elif path == "/api/health":
                 return HealthHandler.do_GET(self)
@@ -92,10 +93,6 @@ class LocalAppHandler(SimpleHTTPRequestHandler):
                 return LoginHandler.do_POST(self)
             elif path == "/api/auth/logout":
                 return LogoutHandler.do_POST(self)
-            elif path == "/api/auth/change-credentials":
-                return ChangeCredsHandler.do_POST(self)
-            elif path == "/api/auth/change-user":
-                return ChangeUserHandler.do_POST(self)
             elif path == "/api/settings":
                 return SettingsHandler.do_POST(self)
             elif path == "/api/customers":
@@ -125,8 +122,7 @@ def run(port=8000):
     server_address = ('', port)
     httpd = HTTPServer(server_address, LocalAppHandler)
     print(f"GRIHA Milk Bill Local Server running at http://localhost:{port}/")
-    print(f"  * Bill Generator: http://localhost:{port}/")
-    print(f"  * Admin Panel:    http://localhost:{port}/admin")
+    print(f"  * Milk Bill Generator: http://localhost:{port}/")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
