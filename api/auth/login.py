@@ -9,15 +9,21 @@ from api._db import (
     create_session_token,
     ensure_db_initialized,
     _load_fallback_store,
-    _save_fallback_store,
 )
 
+
 class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(204)
+    def log_message(self, *args):
+        pass  # Suppress default access logs
+
+    def _cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors_headers()
         self.end_headers()
 
     def send_json(self, status_code, data):
@@ -25,9 +31,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self._cors_headers()
         self.end_headers()
         self.wfile.write(payload)
 
@@ -38,100 +42,78 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             body = {}
 
-        username = body.get("username", "").strip()
-        password = body.get("password", "").strip()
+        username = (body.get("username") or "").strip()
+        password = (body.get("password") or "").strip()
+        # Optional: caller may pass 'role' to restrict login to a specific role
+        required_role = (body.get("role") or "").strip() or None
 
         if not username or not password:
             return self.send_json(400, {"error": "Username and password are required"})
 
-        # 1. Primary: PostgreSQL
+        # ── 1. Primary: PostgreSQL ─────────────────────────────────────────
         conn = get_db()
         if conn:
             try:
                 ensure_db_initialized(conn)
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT id, username, password_hash, salt FROM users WHERE LOWER(username) = LOWER(%s)",
+                        "SELECT id, username, password_hash, salt, role FROM users WHERE LOWER(username) = LOWER(%s)",
                         (username,)
                     )
                     row = cur.fetchone()
-                    if not row:
+
+                    if not row or not verify_password(row["password_hash"], row["salt"], password):
                         return self.send_json(401, {"error": "Invalid username or password"})
 
-                    is_valid = verify_password(row["password_hash"], row["salt"], password)
+                    if required_role and row["role"] != required_role:
+                        return self.send_json(401, {"error": "Invalid username or password"})
 
-                    # Auto-seed check: if admin account has legacy hash and password is default 'admin123', update it
-                    if not is_valid and row["username"].lower() == "admin" and password == "admin123":
-                        new_salt = secrets.token_hex(16)
-                        new_h = hash_password("admin123", new_salt)
+                    token = create_session_token(row["id"], row["username"], row["role"])
+                    expires = datetime.utcnow() + timedelta(days=30)
+                    try:
                         cur.execute(
-                            "UPDATE users SET password_hash = %s, salt = %s WHERE id = %s",
-                            (new_h, new_salt, row["id"])
+                            """INSERT INTO sessions (token, user_id, role, expires_at)
+                               VALUES (%s, %s, %s, %s)
+                               ON CONFLICT (token) DO NOTHING""",
+                            (token, row["id"], row["role"], expires)
                         )
                         conn.commit()
-                        is_valid = True
-
-                    if not is_valid:
-                        return self.send_json(401, {"error": "Invalid username or password"})
-
-                    token = create_session_token(row["id"], row["username"])
-                    expires = datetime.utcnow() + timedelta(days=30)
-                    cur.execute(
-                        "INSERT INTO sessions (token, user_id, expires_at) VALUES (%s, %s, %s)",
-                        (token, row["id"], expires)
-                    )
-                    conn.commit()
-
-                    # Also update fallback cache
-                    store = _load_fallback_store()
-                    # Ensure matching user in fallback
-                    found = False
-                    for u in store.get("users", []):
-                        if u["id"] == row["id"]:
-                            u["username"] = row["username"]
-                            found = True
-                            break
-                    if not found:
-                        store.setdefault("users", []).append({
-                            "id": row["id"],
-                            "username": row["username"],
-                            "password_hash": row["password_hash"],
-                            "salt": row["salt"]
-                        })
-                    _save_fallback_store(store)
+                    except Exception:
+                        conn.rollback()
 
                     return self.send_json(200, {
                         "token": token,
-                        "user": {"id": row["id"], "username": row["username"]},
+                        "user": {"id": row["id"], "username": row["username"], "role": row["role"]},
                         "message": "Login successful"
                     })
             except Exception as e:
                 print("[LOGIN DB ERROR]", e)
+                # Fall through to fallback
             finally:
                 try:
                     conn.close()
                 except Exception:
                     pass
 
-        # 2. Resilient Fallback Store (when PostgreSQL is unreachable or asleep)
-        print("[LOGIN FALLBACK] Authenticating via resilient store")
+        # ── 2. Fallback store (DB unavailable) ────────────────────────────
+        print("[LOGIN] Using fallback store (DB unavailable)")
         store = _load_fallback_store()
-        matched_user = None
+        matched = None
         for u in store.get("users", []):
-            if u["username"].lower() == username.lower():
-                matched_user = u
+            if u.get("username", "").lower() == username.lower():
+                matched = u
                 break
 
-        if not matched_user:
+        if not matched or not verify_password(matched["password_hash"], matched["salt"], password):
             return self.send_json(401, {"error": "Invalid username or password"})
 
-        if not verify_password(matched_user["password_hash"], matched_user["salt"], password):
+        role = matched.get("role", "user")
+        if required_role and role != required_role:
             return self.send_json(401, {"error": "Invalid username or password"})
 
-        token = create_session_token(matched_user["id"], matched_user["username"])
-
+        token = create_session_token(matched["id"], matched["username"], role)
         return self.send_json(200, {
             "token": token,
-            "user": {"id": matched_user["id"], "username": matched_user["username"]},
+            "user": {"id": matched["id"], "username": matched["username"], "role": role},
             "message": "Login successful"
         })
