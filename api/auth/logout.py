@@ -42,8 +42,9 @@ class handler(BaseHTTPRequestHandler):
 
             # 2. Resilient Fallback Store
             store = _load_fallback_store()
-            if token in store.get("sessions", {}):
-                del store["sessions"][token]
+            revoked = store.setdefault("revoked_tokens", [])
+            if token not in revoked:
+                revoked.append(token)
                 _save_fallback_store(store)
 
         return self.send_json(200, {"message": "Logged out successfully"})

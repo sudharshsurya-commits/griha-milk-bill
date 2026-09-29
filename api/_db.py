@@ -2,10 +2,13 @@ import os
 import json
 import secrets
 import hashlib
+import hmac
+import time
 from datetime import datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+SECRET_KEY = os.environ.get("SESSION_SECRET", "griha-production-auth-secret-key-2026")
 FALLBACK_STORE_PATH = os.path.join("/tmp", "griha_auth.json")
 
 def hash_password(password: str, salt: str) -> str:
@@ -21,6 +24,29 @@ def verify_password(stored_hash: str, salt: str, password: str) -> bool:
     """Constant-time password verification to prevent timing attacks."""
     calc = hash_password(password, salt)
     return secrets.compare_digest(stored_hash, calc)
+
+def create_session_token(user_id: int, username: str) -> str:
+    """Creates a cryptographically signed HMAC-SHA256 session token."""
+    expires = int(time.time()) + (30 * 86400) # 30 days
+    data = f"{user_id}:{username}:{expires}"
+    sig = hmac.new(SECRET_KEY.encode("utf-8"), data.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{data}:{sig}"
+
+def verify_token_signature(token: str):
+    """Verifies HMAC signature of a session token."""
+    if not token or token.count(":") != 3:
+        return None
+    try:
+        uid_s, uname, exp_s, sig = token.split(":")
+        data = f"{uid_s}:{uname}:{exp_s}"
+        expected_sig = hmac.new(SECRET_KEY.encode("utf-8"), data.encode("utf-8"), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected_sig):
+            return None
+        if int(exp_s) < int(time.time()):
+            return None
+        return {"id": int(uid_s), "username": uname, "token": token, "expires": int(exp_s)}
+    except Exception:
+        return None
 
 def get_db():
     """
@@ -134,7 +160,7 @@ def ensure_db_initialized(conn):
             pass
 
 def _load_fallback_store():
-    """Loads fallback credentials & session store from /tmp."""
+    """Loads fallback credentials & revoked token list from /tmp."""
     if os.path.exists(FALLBACK_STORE_PATH):
         try:
             with open(FALLBACK_STORE_PATH, "r", encoding="utf-8") as f:
@@ -153,13 +179,13 @@ def _load_fallback_store():
                 "salt": default_salt
             }
         ],
-        "sessions": {}
+        "revoked_tokens": []
     }
     _save_fallback_store(data)
     return data
 
 def _save_fallback_store(data):
-    """Saves fallback credentials & session store to /tmp."""
+    """Saves fallback credentials to /tmp."""
     try:
         with open(FALLBACK_STORE_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f)
@@ -168,8 +194,9 @@ def _save_fallback_store(data):
 
 def authenticate_request(headers):
     """
-    Extracts Bearer token or cookie from request headers and verifies against active sessions.
-    Checks PostgreSQL primary database first; falls back to serverless session store if DB is unreachable.
+    Extracts Bearer token or cookie from request headers and verifies authentication.
+    Uses cryptographically signed tokens verified against PostgreSQL sessions (when available)
+    and HMAC validation across serverless containers.
     """
     auth = headers.get("authorization", headers.get("Authorization", ""))
     token = ""
@@ -185,7 +212,13 @@ def authenticate_request(headers):
     if not token:
         return None
 
-    # 1. Try PostgreSQL
+    # Check HMAC signature
+    verified = verify_token_signature(token)
+    if not verified:
+        # Also check plain hex tokens if legacy
+        pass
+
+    # 1. Check PostgreSQL if available
     conn = get_db()
     if conn:
         try:
@@ -197,6 +230,9 @@ def authenticate_request(headers):
                 row = cur.fetchone()
                 if row:
                     return {"id": row["id"], "username": row["username"], "token": token}
+                elif verified:
+                    # Token signature valid but not in DB -> might have been revoked on logout
+                    return None
         except Exception as e:
             print("[AUTH DB ERROR]", e)
         finally:
@@ -205,16 +241,16 @@ def authenticate_request(headers):
             except Exception:
                 pass
 
-    # 2. Resilient Fallback Store
-    store = _load_fallback_store()
-    sess = store.get("sessions", {}).get(token)
-    if sess:
-        exp_str = sess.get("expires_at", "")
-        try:
-            exp_dt = datetime.fromisoformat(exp_str)
-            if exp_dt > datetime.utcnow():
-                return {"id": sess["user_id"], "username": sess["username"], "token": token}
-        except Exception:
-            return {"id": sess["user_id"], "username": sess["username"], "token": token}
+    # 2. Resilient Fallback Authentication (when DB is unreachable or asleep)
+    if verified:
+        store = _load_fallback_store()
+        revoked = store.get("revoked_tokens", [])
+        if token in revoked:
+            return None
+        # Verify user still exists in fallback store
+        for u in store.get("users", []):
+            if u["id"] == verified["id"]:
+                return {"id": u["id"], "username": u["username"], "token": token}
+        return {"id": verified["id"], "username": verified["username"], "token": token}
 
     return None

@@ -6,6 +6,7 @@ from api._db import (
     get_db,
     verify_password,
     hash_password,
+    create_session_token,
     ensure_db_initialized,
     _load_fallback_store,
     _save_fallback_store,
@@ -73,7 +74,7 @@ class handler(BaseHTTPRequestHandler):
                     if not is_valid:
                         return self.send_json(401, {"error": "Invalid username or password"})
 
-                    token = secrets.token_hex(32)
+                    token = create_session_token(row["id"], row["username"])
                     expires = datetime.utcnow() + timedelta(days=30)
                     cur.execute(
                         "INSERT INTO sessions (token, user_id, expires_at) VALUES (%s, %s, %s)",
@@ -83,11 +84,20 @@ class handler(BaseHTTPRequestHandler):
 
                     # Also update fallback cache
                     store = _load_fallback_store()
-                    store["sessions"][token] = {
-                        "user_id": row["id"],
-                        "username": row["username"],
-                        "expires_at": expires.isoformat()
-                    }
+                    # Ensure matching user in fallback
+                    found = False
+                    for u in store.get("users", []):
+                        if u["id"] == row["id"]:
+                            u["username"] = row["username"]
+                            found = True
+                            break
+                    if not found:
+                        store.setdefault("users", []).append({
+                            "id": row["id"],
+                            "username": row["username"],
+                            "password_hash": row["password_hash"],
+                            "salt": row["salt"]
+                        })
                     _save_fallback_store(store)
 
                     return self.send_json(200, {
@@ -118,14 +128,7 @@ class handler(BaseHTTPRequestHandler):
         if not verify_password(matched_user["password_hash"], matched_user["salt"], password):
             return self.send_json(401, {"error": "Invalid username or password"})
 
-        token = secrets.token_hex(32)
-        expires = datetime.utcnow() + timedelta(days=30)
-        store["sessions"][token] = {
-            "user_id": matched_user["id"],
-            "username": matched_user["username"],
-            "expires_at": expires.isoformat()
-        }
-        _save_fallback_store(store)
+        token = create_session_token(matched_user["id"], matched_user["username"])
 
         return self.send_json(200, {
             "token": token,

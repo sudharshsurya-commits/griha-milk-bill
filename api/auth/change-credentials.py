@@ -5,6 +5,7 @@ from api._db import (
     get_db,
     verify_password,
     hash_password,
+    create_session_token,
     authenticate_request,
     _load_fallback_store,
     _save_fallback_store,
@@ -109,14 +110,26 @@ class handler(BaseHTTPRequestHandler):
                 fallback_matched["password_hash"] = hash_password(new_pass, new_salt)
                 fallback_matched["salt"] = new_salt
 
-            # Update username in active session
-            token = user.get("token")
-            if token and token in store.get("sessions", {}):
-                store["sessions"][token]["username"] = updated_username
-
             _save_fallback_store(store)
+
+        new_token = create_session_token(user["id"], updated_username)
+
+        # If DB available, also register new session token
+        if conn:
+            try:
+                conn_new = get_db()
+                if conn_new:
+                    from datetime import datetime, timedelta
+                    with conn_new.cursor() as cur:
+                        expires = datetime.utcnow() + timedelta(days=30)
+                        cur.execute("INSERT INTO sessions (token, user_id, expires_at) VALUES (%s, %s, %s)", (new_token, user["id"], expires))
+                        conn_new.commit()
+                    conn_new.close()
+            except Exception:
+                pass
 
         return self.send_json(200, {
             "message": "Credentials updated successfully",
-            "newUsername": updated_username
+            "newUsername": updated_username,
+            "token": new_token
         })

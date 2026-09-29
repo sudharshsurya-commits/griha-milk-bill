@@ -567,6 +567,11 @@
           headers: { 'Authorization': 'Bearer ' + token }
         });
         if (res.ok) {
+          if (data.token) {
+            localStorage.setItem('griha_token', data.token);
+            sessionStorage.setItem('griha_token', data.token);
+            document.cookie = 'griha_token=' + data.token + '; path=/; max-age=2592000; SameSite=Lax';
+          }
           const data = await res.json();
           if (data && data.authenticated && data.user) {
             showAdminPanel(data.user);
