@@ -3848,7 +3848,7 @@ function updateSyncBadge(status, text) {
 }
 
 // Unified API caller
-async function apiCall(endpoint, method = 'GET', data = null) {
+async async function apiCall(endpoint, method = 'GET', data = null) {
   const headers = { 'Content-Type': 'application/json' };
   if (authToken) {
     headers['Authorization'] = 'Bearer ' + authToken;

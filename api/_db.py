@@ -51,7 +51,6 @@ def verify_token_signature(token: str):
         return None
     parts = token.split(":")
     try:
-        # New 5-part format: id:username:role:expires:sig
         if len(parts) == 5:
             uid_s, uname, role, exp_s, sig = parts
             data = f"{uid_s}:{uname}:{role}:{exp_s}"
@@ -61,7 +60,6 @@ def verify_token_signature(token: str):
             if int(exp_s) < int(time.time()):
                 return None
             return {"id": int(uid_s), "username": uname, "role": role, "token": token, "expires": int(exp_s)}
-        # Legacy 4-part format: id:username:expires:sig (treat role as admin)
         if len(parts) == 4:
             uid_s, uname, exp_s, sig = parts
             data = f"{uid_s}:{uname}:{exp_s}"
@@ -70,7 +68,6 @@ def verify_token_signature(token: str):
                 return None
             if int(exp_s) < int(time.time()):
                 return None
-            # Legacy tokens are admin tokens
             return {"id": int(uid_s), "username": uname, "role": "admin", "token": token, "expires": int(exp_s)}
     except Exception:
         pass
@@ -91,7 +88,7 @@ def get_db():
     if db_url.startswith("postgres://"):
         db_url = "postgresql://" + db_url[11:]
     try:
-        conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=5)
+        conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=4)
         conn.autocommit = False
         return conn
     except Exception as e:
@@ -102,13 +99,11 @@ def ensure_db_initialized(conn):
     """
     Ensures all PostgreSQL tables exist.
     Auto-seeds admin (admin/admin123) and normal user (user/user123).
-    Handles migrations: adds role column if missing.
     """
     if not conn:
         return
     try:
         with conn.cursor() as cur:
-            # Create tables
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
@@ -175,25 +170,22 @@ def ensure_db_initialized(conn):
                 );
             """)
 
-            # Migration: add role column to users if missing
             try:
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'")
             except Exception:
                 pass
 
-            # Migration: add role column to sessions if missing
             try:
                 cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'")
             except Exception:
                 pass
 
-            # Migration: widen token column
             try:
                 cur.execute("ALTER TABLE sessions ALTER COLUMN token TYPE VARCHAR(255)")
             except Exception:
                 pass
 
-            # Seed admin account
+            # Seed admin
             cur.execute("SELECT id FROM users WHERE username = 'admin'")
             if cur.fetchone():
                 cur.execute("UPDATE users SET role = 'admin' WHERE username = 'admin'")
@@ -204,7 +196,7 @@ def ensure_db_initialized(conn):
                     ("admin", hash_password("admin123", salt), salt)
                 )
 
-            # Seed normal user account
+            # Seed user
             cur.execute("SELECT id FROM users WHERE username = 'user'")
             if not cur.fetchone():
                 salt = secrets.token_hex(16)
@@ -243,16 +235,18 @@ def _make_default_store():
                 "salt": user_salt
             }
         ],
-        "revoked_tokens": []
+        "revoked_tokens": [],
+        "bills": {},
+        "settings": {},
+        "customers": {}
     }
 
 def _load_fallback_store():
-    """Loads credentials & revoked token list from /tmp with role awareness."""
+    """Loads credentials, bills, settings & revoked token list from /tmp."""
     if os.path.exists(FALLBACK_STORE_PATH):
         try:
             with open(FALLBACK_STORE_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            # Validate it has both admin and user roles
             users = data.get("users", [])
             has_admin = any(u.get("role") == "admin" for u in users)
             has_user = any(u.get("role") == "user" for u in users)
@@ -265,7 +259,7 @@ def _load_fallback_store():
     return data
 
 def _save_fallback_store(data):
-    """Saves credentials to /tmp."""
+    """Saves fallback data to /tmp."""
     try:
         with open(FALLBACK_STORE_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f)
@@ -277,8 +271,7 @@ def _save_fallback_store(data):
 def authenticate_request(headers, required_role=None):
     """
     Extracts Bearer/cookie token, verifies authentication, and optionally checks role.
-    required_role: 'admin' | 'user' | None (any authenticated user)
-    Returns user dict {id, username, role, token} or None.
+    returns user dict {id, username, role, token} or None.
     """
     auth = headers.get("authorization", headers.get("Authorization", ""))
     token = ""
@@ -295,10 +288,9 @@ def authenticate_request(headers, required_role=None):
     if not token:
         return None
 
-    # Verify HMAC signature (works without any DB)
     verified = verify_token_signature(token)
 
-    # 1. Check PostgreSQL sessions table (primary)
+    # 1. PostgreSQL check if connected
     conn = get_db()
     if conn:
         try:
@@ -317,7 +309,6 @@ def authenticate_request(headers, required_role=None):
                         return None
                     return user_data
                 elif verified:
-                    # HMAC valid but not in sessions — treat as revoked (DB is authoritative)
                     return None
         except Exception as e:
             print("[AUTH DB ERROR]", e)
@@ -327,7 +318,7 @@ def authenticate_request(headers, required_role=None):
             except Exception:
                 pass
 
-    # 2. Fallback: HMAC-only verification (DB unavailable)
+    # 2. Resilient fallback check
     if verified:
         store = _load_fallback_store()
         if token in store.get("revoked_tokens", []):
