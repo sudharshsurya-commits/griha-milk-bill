@@ -8,10 +8,14 @@ import sys
 import json
 import traceback
 import urllib.parse
+import importlib
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
+
+change_credentials_mod = importlib.import_module("api.auth.change-credentials")
+ChangeCredsHandler = change_credentials_mod.handler
 
 from api.auth.login import handler as LoginHandler
 from api.auth.me import handler as MeHandler
@@ -93,6 +97,8 @@ class LocalAppHandler(SimpleHTTPRequestHandler):
                 return LoginHandler.do_POST(self)
             elif path == "/api/auth/logout":
                 return LogoutHandler.do_POST(self)
+            elif path == "/api/auth/change-credentials":
+                return ChangeCredsHandler.do_POST(self)
             elif path == "/api/settings":
                 return SettingsHandler.do_POST(self)
             elif path == "/api/customers":
